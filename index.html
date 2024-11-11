@@ -38,6 +38,7 @@
 
         // Routing control variable
         var routingControl;
+        var userMarker; // Marker for the user's current location
 
         // Add markers for campuses with click events to set routes
         L.marker(ucBanilad).addTo(map)
@@ -53,12 +54,19 @@
             });
 
         // Locate user's position and add a marker
-        map.locate({ setView: true, maxZoom: 16 });
+        map.locate({ setView: true, maxZoom: 16, watch: true }); // watch option to keep tracking location
         map.on('locationfound', function(e) {
             var userLatLng = e.latlng;
-            L.marker(userLatLng).addTo(map)
-                .bindPopup("You are here!")
-                .openPopup();
+
+            // If the marker doesn't exist, create it
+            if (!userMarker) {
+                userMarker = L.marker(userLatLng).addTo(map)
+                    .bindPopup("You are here!")
+                    .openPopup();
+            } else {
+                // Update the marker's position
+                userMarker.setLatLng(userLatLng);
+            }
         });
 
         // Handle location errors
