@@ -41,29 +41,32 @@
         // Routing control variable
         var routingControl;
         var userMarker; // Marker for the user's current location
+        var routeMarker; // Red route marker for the destination
 
         // Add markers for campuses with click events to set routes
         L.marker(ucBanilad).addTo(map)
-            .bindPopup('University of Cebu Banilad')
-            .on('click', function() {
-                setDestinationRoute(ucBanilad);
-            });
+        .bindPopup('University of Cebu Banilad')
+        .bindTooltip('University of Cebu Banilad', { permanent: true, direction: 'top' })
+        .on('click', function() {
+        setDestinationRoute(ucBanilad);
+        });
 
         L.marker(ucMain).addTo(map)
-            .bindPopup('University of Cebu Main')
-            .on('click', function() {
-                setDestinationRoute(ucMain);
-            });
+        .bindPopup('University of Cebu Main')
+        .bindTooltip('University of Cebu Main', { permanent: true, direction: 'top' })
+        .on('click', function() {
+            setDestinationRoute(ucMain);
+        });
 
         L.marker(ucLm).addTo(map)
-            .bindPopup('University of Cebu Lapu-lapu Campus')
-            .on('click', function() {
-                setDestinationRoute(ucLm);
-            });
-
+        .bindPopup('University of Cebu Lapu-lapu Campus')
+        .bindTooltip('University of Cebu Lapu-lapu Campus', { permanent: true, direction: 'top' })
+        .on('click', function() {
+        setDestinationRoute(ucLm);
+        }); 
 
         // Locate user's position and add a red circle marker instead of the default blue one
-        map.locate({ setView: true, maxZoom: 16, watch: true }); // watch option to keep tracking location
+        map.locate({ setView: true, maxZoom: 12, watch: true }); // watch option to keep tracking location
         map.on('locationfound', function(e) {
             var userLatLng = e.latlng;
 
@@ -89,39 +92,73 @@
         });
 
         // Function to create or update the route to the selected destination
-        function setDestinationRoute(destination) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                var userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
+function setDestinationRoute(destination) {
+    navigator.geolocation.getCurrentPosition(function(position) {
+        var userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
 
-                // Remove previous route if it exists
-                if (routingControl) {
-                    map.removeControl(routingControl);
-                }
+        // Remove previous route if it exists
+        if (routingControl) {
+            map.removeControl(routingControl);
+        }
 
-                // Create routing control using Mapbox as the routing provider
-                routingControl = L.Routing.control({
-                    waypoints: [
-                        userLatLng,      // User's current location
-                        L.latLng(destination) // Destination
-                    ],
-                    routeWhileDragging: true,
-                    router: L.Routing.mapbox(mapboxToken), // Use Mapbox for routing
-                    createMarker: function() { return null; } // Disable default route markers
-                }).addTo(map);
+        // Create routing control using Mapbox as the routing provider
+        routingControl = L.Routing.control({
+            waypoints: [
+                userLatLng,      // User's current location
+                L.latLng(destination) // Destination
+            ],
+            routeWhileDragging: true,
+            router: L.Routing.mapbox(mapboxToken), // Use Mapbox for routing
+            createMarker: function() { return null; } // Disable default route markers
+        }).addTo(map);
 
-                // Add a custom route marker at the destination
-                L.circleMarker(destination, {
-                    color: 'red', // Red circle for route markers
+        // Add a custom route marker at the destination
+        routeMarker = L.circleMarker(destination, {
+            color: 'red', // Red circle for route markers
+            radius: 8,
+            fillColor: 'red',
+            fillOpacity: 0.7
+        }).addTo(map)
+          .bindPopup("Destination");
+
+        // Track user's location and update the red circle if the user is on the route
+        map.on('locationfound', function(e) {
+            var userLatLng = e.latlng;
+            // Update user marker position
+            if (!userMarker) {
+                userMarker = L.circleMarker(userLatLng, {
+                    color: '', // Red circle for "You are here"
                     radius: 8,
                     fillColor: 'red',
                     fillOpacity: 0.7
                 }).addTo(map)
-                  .bindPopup("Destination");
-                
-            }, function(error) {
-                alert("Unable to track your location: " + error.message);
-            }, { enableHighAccuracy: true });
-        }
+                  .bindPopup("You are here!")
+                  .openPopup();
+            } else {
+                // Update the marker's position
+                userMarker.setLatLng(userLatLng);
+            }
+
+            // Update the red route marker if the user is within a threshold (e.g., 20 meters)
+            var distanceToRouteMarker = userLatLng.distanceTo(routeMarker.getLatLng());
+            if (distanceToRouteMarker < 20) {  // 20 meters threshold
+                routeMarker.setLatLng(userLatLng); // Update the route marker to the user's position
+            }
+        });
+
+        // Check if the user is close to the destination
+        map.on('locationfound', function(e) {
+            var userLatLng = e.latlng;
+            var distanceToDestination = userLatLng.distanceTo(destination);
+            if (distanceToDestination < 20) {  // 20 meters threshold
+                alert("You have reached the destination!");
+                map.removeControl(routingControl);  // Optionally remove route on arrival
+            }
+        });
+    }, function(error) {
+        alert("Unable to track your location: " + error.message);
+    }, { enableHighAccuracy: true });
+}
     </script>
 </body>
 </html>
