@@ -42,29 +42,39 @@
         var routingControl;
         var userMarker; // Marker for the user's current location
         var routeMarker; // Red route marker for the destination
+        var campusMarkers = {}; // Store markers to access later
 
-        // Add markers for campuses with click events to set routes
-        L.marker(ucBanilad).addTo(map)
-        .bindPopup('University of Cebu Banilad')
-        .bindTooltip('University of Cebu Banilad', { permanent: true, direction: 'top' })
-        .on('click', function() {
+// Add markers for campuses with click events to set routes
+campusMarkers['ucBanilad'] = L.marker(ucBanilad).addTo(map)
+    .bindPopup('University of Cebu Banilad')
+    .bindTooltip('University of Cebu Banilad', { permanent: true, direction: 'top' })
+    .on('click', function() {
         setDestinationRoute(ucBanilad);
-        });
+        hideTooltips(); // Hide tooltips on route selection
+    }); 
 
-        L.marker(ucMain).addTo(map)
-        .bindPopup('University of Cebu Main')
-        .bindTooltip('University of Cebu Main', { permanent: true, direction: 'top' })
-        .on('click', function() {
-            setDestinationRoute(ucMain);
-        });
+campusMarkers['ucMain'] = L.marker(ucMain).addTo(map)
+    .bindPopup('University of Cebu Main')
+    .bindTooltip('University of Cebu Main', { permanent: true, direction: 'top' })
+    .on('click', function() {
+        setDestinationRoute(ucMain);
+        hideTooltips(); // Hide tooltips on route selection
+    });
 
-        L.marker(ucLm).addTo(map)
-        .bindPopup('University of Cebu Lapu-lapu Campus')
-        .bindTooltip('University of Cebu Lapu-lapu Campus', { permanent: true, direction: 'top' })
-        .on('click', function() {
+campusMarkers['ucLm'] = L.marker(ucLm).addTo(map)
+    .bindPopup('University of Cebu Lapu-lapu Campus')
+    .bindTooltip('University of Cebu Lapu-lapu Campus', { permanent: true, direction: 'top' })
+    .on('click', function() {
         setDestinationRoute(ucLm);
-        }); 
+        hideTooltips(); // Hide tooltips on route selection
+    });
 
+// Function to hide all tooltips
+function hideTooltips() {
+    for (var key in campusMarkers) {
+        campusMarkers[key].unbindTooltip();
+    }
+}
         // Locate user's position and add a red circle marker instead of the default blue one
         map.locate({ setView: true, maxZoom: 12, watch: true }); // watch option to keep tracking location
         map.on('locationfound', function(e) {
@@ -92,13 +102,18 @@
         });
 
         // Function to create or update the route to the selected destination
-function setDestinationRoute(destination) {
+        function setDestinationRoute(destination) {
     navigator.geolocation.getCurrentPosition(function(position) {
         var userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
 
         // Remove previous route if it exists
         if (routingControl) {
             map.removeControl(routingControl);
+        }
+
+        // Remove the previous route marker if it exists
+        if (routeMarker) {
+            map.removeLayer(routeMarker);
         }
 
         // Create routing control using Mapbox as the routing provider
@@ -159,6 +174,7 @@ function setDestinationRoute(destination) {
         alert("Unable to track your location: " + error.message);
     }, { enableHighAccuracy: true });
 }
+
     </script>
 </body>
 </html>
