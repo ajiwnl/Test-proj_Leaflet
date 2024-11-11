@@ -38,18 +38,9 @@
         var ucBanilad = [10.3384, 123.9117];
         var ucMain = [10.2969648, 123.896915672416];
 
-        // Routing control and user marker variables
+        // Routing control variable
         var routingControl;
         var userMarker;
-        var lastUserLatLng; // Store the last user location
-
-        // Minimum movement threshold in meters
-        var minMovementThreshold = 10;
-
-        // Helper function to calculate distance between two LatLng points
-        function calculateDistance(latlng1, latlng2) {
-            return map.distance(latlng1, latlng2);
-        }
 
         // Add markers for campuses with click events to set routes
         L.marker(ucBanilad).addTo(map)
@@ -64,29 +55,24 @@
                 setDestinationRoute(ucMain);
             });
 
-        // Track and update user's location in real-time with a movement threshold
+        // Track and update user's location in real-time
         function trackLocation() {
             navigator.geolocation.watchPosition(function(position) {
                 var userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
 
-                // Only update if the user has moved a minimum distance
-                if (!lastUserLatLng || calculateDistance(userLatLng, lastUserLatLng) > minMovementThreshold) {
-                    lastUserLatLng = userLatLng; // Update last known location
+                // Update the user marker or create it if it doesn't exist
+                if (!userMarker) {
+                    userMarker = L.marker(userLatLng).addTo(map).bindPopup("You are here!");
+                } else {
+                    userMarker.setLatLng(userLatLng);
+                }
 
-                    // Update the user marker or create it if it doesn't exist
-                    if (!userMarker) {
-                        userMarker = L.marker(userLatLng).addTo(map).bindPopup("You are here!");
-                    } else {
-                        userMarker.setLatLng(userLatLng);
-                    }
+                // Center the map on the user's new location
+                map.setView(userLatLng, 16);
 
-                    // Center the map on the user's new location
-                    map.setView(userLatLng, 16);
-
-                    // Update the route if it exists
-                    if (routingControl) {
-                        routingControl.spliceWaypoints(0, 1, userLatLng);
-                    }
+                // Update the route if it exists
+                if (routingControl) {
+                    routingControl.spliceWaypoints(0, 1, userLatLng);
                 }
             }, function(error) {
                 alert("Unable to track your location: " + error.message);
