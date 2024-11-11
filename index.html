@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leaflet Map with Mapbox Routing and Real-Time Location</title>
+    <title>Leaflet Map with Mapbox Routing</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -23,15 +23,14 @@
     <script>
         // Initialize the map
         var map = L.map('map');
-        var mapboxToken = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
         // Add a tile layer (OpenStreetMap)
-        L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
-            id: 'mapbox/streets-v11',
-            tileSize: 512,
-            zoomOffset: -1,
-            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>'
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
+
+        // Mapbox access token
+        var mapboxToken = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
         // Coordinates for UC Banilad and UC Main
         var ucBanilad = [10.3384, 123.9117];
@@ -39,7 +38,6 @@
 
         // Routing control variable
         var routingControl;
-        var currentPositionMarker;
 
         // Add markers for campuses with click events to set routes
         L.marker(ucBanilad).addTo(map)
@@ -54,44 +52,43 @@
                 setDestinationRoute(ucMain);
             });
 
-        // Watch position and update route in real-time
-        function watchPosition(destination) {
-            navigator.geolocation.watchPosition(function(position) {
-                var userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
+        // Locate user's position and add a marker
+        map.locate({ setView: true, maxZoom: 16 });
+        map.on('locationfound', function(e) {
+            var userLatLng = e.latlng;
+            L.marker(userLatLng).addTo(map)
+                .bindPopup("You are here!")
+                .openPopup();
+        });
 
-                // Update or create the user's current position marker
-                if (currentPositionMarker) {
-                    currentPositionMarker.setLatLng(userLatLng);
-                } else {
-                    currentPositionMarker = L.marker(userLatLng).addTo(map)
-                        .bindPopup("You are here!")
-                        .openPopup();
-                }
+        // Handle location errors
+        map.on('locationerror', function(e) {
+            alert("Location access denied: " + e.message);
+        });
+
+        // Function to create or update the route to the selected destination
+        function setDestinationRoute(destination) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                var userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
 
                 // Remove previous route if it exists
                 if (routingControl) {
                     map.removeControl(routingControl);
                 }
 
-                // Create a new route to the destination
+                // Create routing control using Mapbox as the routing provider
                 routingControl = L.Routing.control({
                     waypoints: [
                         userLatLng,      // User's current location
                         L.latLng(destination) // Destination
                     ],
                     routeWhileDragging: true,
-                    router: L.Routing.mapbox(mapboxToken)
+                    router: L.Routing.mapbox(mapboxToken) // Use Mapbox for routing
                 }).addTo(map);
 
             }, function(error) {
                 alert("Unable to track your location: " + error.message);
             }, { enableHighAccuracy: true });
-        }
-
-        // Function to set the destination route and start watching position
-        function setDestinationRoute(destination) {
-            // Start watching the user's position for real-time updates
-            watchPosition(destination);
         }
     </script>
 </body>
