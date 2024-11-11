@@ -23,16 +23,18 @@
     <script>
         // Initialize the map
         var map = L.map('map');
-        // Mapbox access token
+         // Mapbox access token
         var mapboxToken = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
         // Add a tile layer (OpenStreetMap)
+        // Use the Mapbox Streets style
         L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
-            id: 'mapbox/streets-v11',
+            id: 'mapbox/streets-v11',  // Mapbox Streets style
             tileSize: 512,
             zoomOffset: -1,
             attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>'
         }).addTo(map);
+
 
         // Coordinates for UC Banilad and UC Main
         var ucBanilad = [10.3384, 123.9117];
@@ -40,7 +42,6 @@
 
         // Routing control variable
         var routingControl;
-        var userMarker;
 
         // Add markers for campuses with click events to set routes
         L.marker(ucBanilad).addTo(map)
@@ -55,29 +56,19 @@
                 setDestinationRoute(ucMain);
             });
 
-        // Track and update user's location in real-time
-        function trackLocation() {
-            navigator.geolocation.watchPosition(function(position) {
-                var userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
+        // Locate user's position and add a marker
+        map.locate({ setView: true, maxZoom: 16 });
+        map.on('locationfound', function(e) {
+            var userLatLng = e.latlng;
+            L.marker(userLatLng).addTo(map)
+                .bindPopup("You are here!")
+                .openPopup();
+        });
 
-                // Update the user marker or create it if it doesn't exist
-                if (!userMarker) {
-                    userMarker = L.marker(userLatLng).addTo(map).bindPopup("You are here!");
-                } else {
-                    userMarker.setLatLng(userLatLng);
-                }
-
-                // Center the map on the user's new location
-                map.setView(userLatLng, 16);
-
-                // Update the route if it exists
-                if (routingControl) {
-                    routingControl.spliceWaypoints(0, 1, userLatLng);
-                }
-            }, function(error) {
-                alert("Unable to track your location: " + error.message);
-            }, { enableHighAccuracy: true });
-        }
+        // Handle location errors
+        map.on('locationerror', function(e) {
+            alert("Location access denied: " + e.message);
+        });
 
         // Function to create or update the route to the selected destination
         function setDestinationRoute(destination) {
@@ -96,11 +87,8 @@
                         L.latLng(destination) // Destination
                     ],
                     routeWhileDragging: true,
-                    router: L.Routing.mapbox(mapboxToken)
+                    router: L.Routing.mapbox(mapboxToken) // Use Mapbox for routing
                 }).addTo(map);
-
-                // Start tracking the location for real-time updates
-                trackLocation();
 
             }, function(error) {
                 alert("Unable to track your location: " + error.message);
