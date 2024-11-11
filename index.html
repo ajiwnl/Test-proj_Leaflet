@@ -23,12 +23,12 @@
     <script>
         // Initialize the map
         var map = L.map('map');
-         // Mapbox access token
+        // Mapbox access token
         var mapboxToken = 'pk.eyJ1IjoiYWppd25sIiwiYSI6ImNtMzhsaHFzNTB0dmsyaXE1enV5aXNrbjcifQ.MKG4wR3aMbdde0oisZLH7g';
 
         // Add a tile layer (OpenStreetMap)
         L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=' + mapboxToken, {
-            id: 'mapbox/streets-v11',  // Mapbox Streets style
+            id: 'mapbox/streets-v11',
             tileSize: 512,
             zoomOffset: -1,
             attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>'
@@ -38,9 +38,18 @@
         var ucBanilad = [10.3384, 123.9117];
         var ucMain = [10.2969648, 123.896915672416];
 
-        // Routing control variable
+        // Routing control and user marker variables
         var routingControl;
         var userMarker;
+        var lastUserLatLng; // Store the last user location
+
+        // Minimum movement threshold in meters
+        var minMovementThreshold = 10;
+
+        // Helper function to calculate distance between two LatLng points
+        function calculateDistance(latlng1, latlng2) {
+            return map.distance(latlng1, latlng2);
+        }
 
         // Add markers for campuses with click events to set routes
         L.marker(ucBanilad).addTo(map)
@@ -55,19 +64,34 @@
                 setDestinationRoute(ucMain);
             });
 
-        // Locate user's position and add a marker
-        map.locate({ setView: true, maxZoom: 16 });
-        map.on('locationfound', function(e) {
-            var userLatLng = e.latlng;
-            userMarker = L.marker(userLatLng).addTo(map)
-                .bindPopup("You are here!")
-                .openPopup();
-        });
+        // Track and update user's location in real-time with a movement threshold
+        function trackLocation() {
+            navigator.geolocation.watchPosition(function(position) {
+                var userLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
 
-        // Handle location errors
-        map.on('locationerror', function(e) {
-            alert("Location access denied: " + e.message);
-        });
+                // Only update if the user has moved a minimum distance
+                if (!lastUserLatLng || calculateDistance(userLatLng, lastUserLatLng) > minMovementThreshold) {
+                    lastUserLatLng = userLatLng; // Update last known location
+
+                    // Update the user marker or create it if it doesn't exist
+                    if (!userMarker) {
+                        userMarker = L.marker(userLatLng).addTo(map).bindPopup("You are here!");
+                    } else {
+                        userMarker.setLatLng(userLatLng);
+                    }
+
+                    // Center the map on the user's new location
+                    map.setView(userLatLng, 16);
+
+                    // Update the route if it exists
+                    if (routingControl) {
+                        routingControl.spliceWaypoints(0, 1, userLatLng);
+                    }
+                }
+            }, function(error) {
+                alert("Unable to track your location: " + error.message);
+            }, { enableHighAccuracy: true });
+        }
 
         // Function to create or update the route to the selected destination
         function setDestinationRoute(destination) {
@@ -86,33 +110,15 @@
                         L.latLng(destination) // Destination
                     ],
                     routeWhileDragging: true,
-                    router: L.Routing.mapbox(mapboxToken) // Use Mapbox for routing
+                    router: L.Routing.mapbox(mapboxToken)
                 }).addTo(map);
 
-                // Event listener for route found
-                routingControl.on('routesfound', function(e) {
-                    var route = e.routes[0].coordinates;
-                    moveMarkerAlongRoute(route);
-                });
+                // Start tracking the location for real-time updates
+                trackLocation();
 
             }, function(error) {
                 alert("Unable to track your location: " + error.message);
             }, { enableHighAccuracy: true });
-        }
-
-        // Function to animate the marker along the route
-        function moveMarkerAlongRoute(route) {
-            var index = 0;
-
-            function animateMarker() {
-                if (index < route.length) {
-                    userMarker.setLatLng(route[index]);
-                    index++;
-                    setTimeout(animateMarker, 100); // Adjust delay for speed
-                }
-            }
-
-            animateMarker();
         }
     </script>
 </body>
