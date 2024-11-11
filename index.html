@@ -37,8 +37,10 @@
         var ucMain = [10.2969648, 123.896915672416];
         var ucLm = [10.325719, 123.952489];
 
+
         // Routing control variable
         var routingControl;
+        var userMarker; // Marker for the user's current location
 
         // Add markers for campuses with click events to set routes
         L.marker(ucBanilad).addTo(map)
@@ -52,34 +54,31 @@
             .on('click', function() {
                 setDestinationRoute(ucMain);
             });
-        
+
         L.marker(ucLm).addTo(map)
             .bindPopup('University of Cebu Lapu-lapu Campus')
             .on('click', function() {
                 setDestinationRoute(ucLm);
             });
 
-        // Variable to store the "You are here" marker
-        var userMarker;
 
-        // Locate user's position and add a marker using circleMarker
+        // Locate user's position and add a red circle marker instead of the default blue one
         map.locate({ setView: true, maxZoom: 16, watch: true }); // watch option to keep tracking location
         map.on('locationfound', function(e) {
             var userLatLng = e.latlng;
 
-            // If the marker does not exist, create it
+            // If the marker doesn't exist, create it
             if (!userMarker) {
                 userMarker = L.circleMarker(userLatLng, {
-                    radius: 10,  
-                    color: 'red', 
-                    weight: 2,    
-                    fillColor: 'black', 
-                    fillOpacity: 0.5  
+                    color: '', // Red circle for "You are here"
+                    radius: 8,
+                    fillColor: 'red',
+                    fillOpacity: 0.7
                 }).addTo(map)
-                .bindPopup("You are here!")
-                .openPopup();
+                    .bindPopup("You are here!")
+                    .openPopup();
             } else {
-                // If the marker exists, move it to the new location
+                // Update the marker's position
                 userMarker.setLatLng(userLatLng);
             }
         });
@@ -106,9 +105,19 @@
                         L.latLng(destination) // Destination
                     ],
                     routeWhileDragging: true,
-                    router: L.Routing.mapbox(mapboxToken) // Use Mapbox for routing
+                    router: L.Routing.mapbox(mapboxToken), // Use Mapbox for routing
+                    createMarker: function() { return null; } // Disable default route markers
                 }).addTo(map);
 
+                // Add a custom route marker at the destination
+                L.circleMarker(destination, {
+                    color: 'red', // Red circle for route markers
+                    radius: 8,
+                    fillColor: 'red',
+                    fillOpacity: 0.7
+                }).addTo(map)
+                  .bindPopup("Destination");
+                
             }, function(error) {
                 alert("Unable to track your location: " + error.message);
             }, { enableHighAccuracy: true });
